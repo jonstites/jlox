@@ -11,11 +11,11 @@ import java.util.stream.Stream;
 import java.nio.file.Path;
 
 public class Lox {
-
+    static boolean hadError = false;
     public static void main(String[] args) throws IOException {
         if (args.length > 1) {
             System.out.println("Usage: jlox [script]");
-            System.exit(64);
+            System.exit(SysExits.EX_USAGE.code());
         } else if (args.length == 1) {
             runFile(args[0]);
         } else {
@@ -46,5 +46,18 @@ public class Lox {
 
         tokens.forEachOrdered(token -> System.out.println(token));
         scanner.close();
+        if (hadError) {
+            System.exit(SysExits.EX_DATAERR.code());
+        }
+    }
+
+    static void error(int line, String message) {
+        report(line, "", message);
+    }
+
+    static void report(int line, String where, String message) {
+        System.err.println(
+            "[line " + line + "] Error" + where + ": " + message);
+        hadError = true;
     }
 }
