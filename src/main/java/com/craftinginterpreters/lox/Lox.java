@@ -6,8 +6,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Scanner;
-import java.util.stream.Stream;
+import java.util.List;
 import java.nio.file.Path;
 
 public class Lox {
@@ -42,10 +41,11 @@ public class Lox {
 
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
-        Stream<String> tokens = scanner.tokens();
+        List<Token> tokens = scanner.scanTokens();
 
-        tokens.forEachOrdered(token -> System.out.println(token));
-        scanner.close();
+        for (Token token: tokens) {
+            System.out.println(token);
+        }
         if (hadError) {
             System.exit(SysExits.EX_DATAERR.code());
         }
