@@ -1,7 +1,9 @@
 package com.craftinginterpreters.lox;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 
@@ -11,6 +13,29 @@ public class Scanner {
     private int start = 0;
     private int current = 0;
     private int line = 1;
+
+    private static final Map<String, TokenType> keywords;
+
+    static {                                             
+      keywords = new HashMap<>();                        
+      keywords.put("and",    AND);                       
+      keywords.put("class",  CLASS);                     
+      keywords.put("else",   ELSE);                      
+      keywords.put("false",  FALSE);                     
+      keywords.put("for",    FOR);                       
+      keywords.put("fun",    FUN);                       
+      keywords.put("if",     IF);                        
+      keywords.put("nil",    NIL);                       
+      keywords.put("or",     OR);                        
+      keywords.put("print",  PRINT);                     
+      keywords.put("return", RETURN);                    
+      keywords.put("super",  SUPER);                     
+      keywords.put("this",   THIS);                      
+      keywords.put("true",   TRUE);                      
+      keywords.put("var",    VAR);                       
+      keywords.put("while",  WHILE);                     
+    }                                                    
+  
 
     Scanner(String source) {
         this.source = source;
@@ -61,7 +86,17 @@ public class Scanner {
                 line++;
                 break;
 
-            default: Lox.error(line, "Unexpected character."); break;
+            case '"': string(); break;
+            default: {
+                if(isDigit(c)) {
+                    number();
+                } else if (isAlpha(c)) {
+                    identifier();
+                } else {
+                    Lox.error(line, "Unexpected character: " + c); break;
+                }
+
+            }
         }
     }
 
@@ -83,13 +118,20 @@ public class Scanner {
             return false;
         }
 
-        current++;
+        advance();
         return true;
     }
     
     private char peek() {
         if (isAtEnd()) return '\0';
         return source.charAt(current);
+    }
+
+    private char peekNext() {
+        if (isAtEnd()) return '\0';
+        if (current + 1 >= source.length()) return '\0';
+
+        return source.charAt(current + 1);
     }
 
     private void addToken(TokenType type) {
@@ -99,5 +141,60 @@ public class Scanner {
     private void addToken(TokenType type, Object literal) {
         String text = source.substring(start, current);
         tokens.add(new Token(type, text, literal, line));
+    }
+
+    private void string() {
+        while(peek() != '"' && !isAtEnd()) {
+            if(peek() == '\n') line++;
+            advance();
+        }
+
+        if(isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+
+        // Closing "
+        advance();
+
+        // Trim off the surrounding quotes
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
+    }
+
+    private void number() {
+        while(isDigit(peek())) advance();
+        
+        // Possible fractional part
+        if(peek() == '.' && isDigit(peekNext())) {
+            // Consume the '.'
+            advance();
+            while(isDigit(peek())) advance();
+        }
+        Double value = Double.parseDouble(source.substring(start, current));
+        addToken(NUMBER, value);
+    }
+
+    private void identifier() {
+        while (isAlphaNumeric(peek())) advance();
+
+        // Check identifiers for reserved words.
+        String text = source.substring(start, current);
+        TokenType type = keywords.getOrDefault(text, IDENTIFIER);
+        addToken(type);
+    }
+
+    private boolean isDigit(char c) {
+        return c >= '0' && c <= '9';
+    }
+
+    private boolean isAlpha(char c) {
+        return (c >= 'a' && c <= 'z') ||
+               (c >= 'A' && c <= 'Z') ||
+               (c == '_');
+    }
+
+    private boolean isAlphaNumeric(char c) {
+        return isAlpha(c) || isDigit(c);
     }
 }
